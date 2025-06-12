@@ -1,83 +1,69 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+
+"""
+Author: Varad Pawaskar
+Description: Custom ROS node for autonomous obstacle avoidance using an ultrasonic sensor.
+This script reads distance data and publishes motor commands to navigate without collisions.
+"""
 
 import rospy
-
-from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
-pub = None
 
-def callback_laser(msg):
-  # 120 degrees into 3 regions
-  regions = {
-    'right':  min(min(msg.ranges[0:2]), 10),
-    'front':  min(min(msg.ranges[3:5]), 10),
-    'left':   min(min(msg.ranges[6:9]), 10),
-  }
-  
-  take_action(regions)
-  
-def take_action(regions):
-  threshold_dist = 1.5
-  linear_speed = 0.6
-  angular_speed = 1
+class ObstacleAvoidanceNode:
+    def __init__(self):
+        # Initialize the ROS node
+        rospy.init_node('smart_navigator', anonymous=True)
 
-  msg = Twist()
-  linear_x = 0
-  angular_z = 0
-  
-  state_description = ''
-  
-  if regions['front'] > threshold_dist and regions['left'] > threshold_dist and regions['right'] > threshold_dist:
-    state_description = 'case 1 - no obstacle'
-    linear_x = linear_speed
-    angular_z = 0
-  elif regions['front'] < threshold_dist and regions['left'] < threshold_dist and regions['right'] < threshold_dist:
-    state_description = 'case 7 - front and left and right'
-    linear_x = -linear_speed
-    angular_z = angular_speed # Increase this angular speed for avoiding obstacle faster
-  elif regions['front'] < threshold_dist and regions['left'] > threshold_dist and regions['right'] > threshold_dist:
-    state_description = 'case 2 - front'
-    linear_x = 0
-    angular_z = angular_speed
-  elif regions['front'] > threshold_dist and regions['left'] > threshold_dist and regions['right'] < threshold_dist:
-    state_description = 'case 3 - right'
-    linear_x = 0
-    angular_z = -angular_speed
-  elif regions['front'] > threshold_dist and regions['left'] < threshold_dist and regions['right'] > threshold_dist:
-    state_description = 'case 4 - left'
-    linear_x = 0
-    angular_z = angular_speed
-  elif regions['front'] < threshold_dist and regions['left'] > threshold_dist and regions['right'] < threshold_dist:
-    state_description = 'case 5 - front and right'
-    linear_x = 0
-    angular_z = -angular_speed
-  elif regions['front'] < threshold_dist and regions['left'] < threshold_dist and regions['right'] > threshold_dist:
-    state_description = 'case 6 - front and left'
-    linear_x = 0
-    angular_z = angular_speed
-  elif regions['front'] > threshold_dist and regions['left'] < threshold_dist and regions['right'] < threshold_dist:
-    state_description = 'case 8 - left and right'
-    linear_x = linear_speed
-    angular_z = 0
-  else:
-    state_description = 'unknown case'
-    rospy.loginfo(regions)
+        # Publisher to control robot velocity
+        self.velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
-  rospy.loginfo(state_description)
-  msg.linear.x = linear_x
-  msg.angular.z = angular_z
-  pub.publish(msg)
+        # Subscriber to the ultrasonic sensor distance
+        self.distance_subscriber = rospy.Subscriber('/ultrasonic_distance', Float32, self.callback_distance)
 
-def main():
-  global pub
-  
-  rospy.init_node('reading_laser')
-  
-  pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-  
-  sub = rospy.Subscriber('/robot/laser/scan', LaserScan, callback_laser)
-  
-  rospy.spin()
+        # Initialize distance and command message
+        self.current_distance = 100.0  # Default safe distance
+        self.cmd = Twist()
+
+        rospy.loginfo("Smart Navigator Node Initialized")
+
+    def callback_distance(self, msg):
+        """
+        Callback function to process incoming ultrasonic distance readings.
+        """
+        self.current_distance = msg.data
+        rospy.loginfo("Current distance: %.2f cm", self.current_distance)
+
+        # Threshold distance for obstacle detection
+        if self.current_distance < 20.0:
+            rospy.logwarn("Obstacle detected! Stopping or turning.")
+            self.avoid_obstacle()
+        else:
+            self.move_forward()
+
+        # Publish the velocity command
+        self.velocity_publisher.publish(self.cmd)
+
+    def move_forward(self):
+        """
+        Move forward with constant linear speed.
+        """
+        self.cmd.linear.x = 0.2  # Move straight
+        self.cmd.angular.z = 0.0
+
+    def avoid_obstacle(self):
+        """
+        Rotate in place to avoid detected obstacle.
+        """
+        self.cmd.linear.x = 0.0
+        self.cmd.angular.z = 0.5  # Rotate left
+
+    def run(self):
+        rospy.spin()
 
 if __name__ == '__main__':
-  main()
+    try:
+        node = ObstacleAvoidanceNode()
+        node.run()
+    except rospy.ROSInterruptException:
+        pass

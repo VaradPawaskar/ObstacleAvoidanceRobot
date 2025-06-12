@@ -1,13 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <!-- Load robot description from xacro -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find robot_description)/urdf/robot.xacro'" />
 
-    <param name="robot_description" command="$(find xacro)/xacro.py '$(find robot_description)/urdf/robot.xacro'" />
+  <!-- Spawn the robot into Gazebo -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" output="screen"
+        args="-param robot_description -urdf -model varad_bot" />
 
-    <arg name="x" default="0"/>
-    <arg name="y" default="0"/>
-    <arg name="z" default="0.5"/>
+  <!-- Launch Gazebo (optional, if not already running) -->
+  <!--
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" />
+  -->
 
-    <node name="mybot_spawn" pkg="gazebo_ros" type="spawn_model" output="screen"
-          args="-urdf -param robot_description -model robot -x $(arg x) -y $(arg y) -z $(arg z)" />
+  <!-- Run your custom obstacle avoidance node -->
+  <node name="smart_navigator" pkg="robot_description" type="smart_navigator.py" output="screen" />
 
 </launch>
