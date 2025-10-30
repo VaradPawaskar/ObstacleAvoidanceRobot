@@ -41,3 +41,25 @@ cd simulation_ws
 catkin_make
 source devel/setup.bash
 cd ..
+```
+## 3. Launch the Simulation
+Open a new terminal for each of the following commands.
+
+1. Launch Gazebo World: This command starts the Gazebo simulation environment with the chosen world.
+```bash
+roslaunch my_worlds <world_name>.launch
+```
+2. Spawn the Robot: In a new terminal, run this command to load the robot model into the environment at the default position (0,0,0).
+   ```bash
+   roslaunch robot_description spawn.launch`
+   ```
+3. Start the Obstacle Avoidance Algorithm: In a third terminal, run this command to start the robot's motion and activate the collision avoidance script.
+   ```bash
+   rosrun motion_plan obstacle_avoidance.py
+   ```
+   The robot will now start moving and autonomously avoid any obstacles it detects.
+
+# Acknowledgements
+This project was developed with reference to the "Exploring ROS using 2-Wheeled Robot" project from The Construct.
+
+Reference: https://www.theconstructsim.com/ros-projects-exploring-ros-using-2-wheeled-robot-part-1
