@@ -7,7 +7,6 @@ This project is an implementation of an autonomous obstacle-avoiding robot, deve
 * **ROS (Robot Operating System)**: For communication between different parts of the robot (nodes).
 * **Gazebo**: For simulating the robot and the environment.
 * **Python**: For the obstacle avoidance logic and motion control.
-* **C++**: For ROS node development.
 * **catkin**: As the build system for ROS.
 
 ---
